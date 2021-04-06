@@ -22,6 +22,10 @@ using namespace AdaptiveCards;
 @implementation ACRContentHoldingUIView {
     __weak UIImageView *_imageView;
     __weak ACRContentStackView *_viewGroup;
+    __weak NSLayoutConstraint *imageViewHeightConstraint;
+    __weak NSLayoutConstraint *heightConstraint;
+    BOOL isImageSet;
+    CGSize prevIntrinsicContentSize;
 }
 
 - (instancetype)initWithImageProperties:(ACRImageProperties *)imageProperties imageView:(UIImageView *)imageView viewGroup:(ACRContentStackView *)viewGroup
@@ -50,6 +54,7 @@ using namespace AdaptiveCards;
 - (void)layoutSubviews
 {
     [super layoutSubviews];
+
     if (_isPersonStyle) {
         UIView *subview = self.subviews[0];
         CGFloat radius = subview.bounds.size.width / 2.0;
@@ -129,34 +134,36 @@ using namespace AdaptiveCards;
                 [layer removeFromSuperlayer];
             }
         }
-        // The content view is UIImageView
-    } else if (_imageView.image) {
-        CGSize frameSize = self.frame.size;
-        if (frameSize.width < self.imageProperties.contentSize.width) {
-            if (self.imageProperties.acrImageSize != ACRImageSizeExplicit) {
-                [self updateIntrinsicContentSizeOfSelfAndViewGroup];
-                // set new height anchor to the height of new intrinsic contentsize
-                NSLayoutConstraint *heightAnchor = [self.heightAnchor constraintEqualToConstant:self.imageProperties.contentSize.height];
-                heightAnchor.priority = 999;
-                heightAnchor.active = YES;
-                // notify UIKit that the intrinsic contensize is updated
-                [_viewGroup invalidateIntrinsicContentSize];
+    } else {
+        if (isImageSet || _imageView.image) {
+            BOOL bUpdate = NO;
+            if (self.imageProperties.acrImageSize != ACRImageSizeExplicit && !heightConstraint) {
+                [self setHeightConstraint];
+                bUpdate = YES;
             }
 
-        } else if (self.imageProperties.acrImageSize == ACRImageSizeStretch && frameSize.width != self.imageProperties.contentSize.width) {
-            [self updateIntrinsicContentSizeOfSelfAndViewGroup];
+            if (self.imageProperties.acrImageSize == ACRImageSizeStretch) {
+                bUpdate = !(heightConstraint && imageViewHeightConstraint);
 
-            // set new height anchor to the height of new intrinsic contentsize
-            NSLayoutConstraint *heightAnchor = [self.heightAnchor constraintEqualToConstant:self.imageProperties.contentSize.height];
-            heightAnchor.priority = 999;
-            heightAnchor.active = YES;
+                if (!heightConstraint) {
+                    [self setHeightConstraint];
+                }
 
-            // set new height anchor to the height of new intrinsic contentsize
-            NSLayoutConstraint *imageViewHeightAnchor = [_imageView.heightAnchor constraintEqualToConstant:self.imageProperties.contentSize.height];
-            imageViewHeightAnchor.priority = 999;
-            imageViewHeightAnchor.active = YES;
-            // notify UIKit that the intrinsic contensize is updated
-            [_viewGroup invalidateIntrinsicContentSize];
+                if (!imageViewHeightConstraint) {
+                    [self setImageViewHeightConstraint];
+                }
+            }
+
+            if (bUpdate) {
+                if ([_viewGroup isKindOfClass:[ACRColumnView class]]) {
+                    ACRColumnSetView *columnSetView = ((ACRColumnView *)_viewGroup).columnsetView;
+                    if (columnSetView) {
+                        [columnSetView updateIntrinsicContentSize];
+                        [columnSetView invalidateIntrinsicContentSize];
+                    }
+                }
+                [_viewGroup invalidateIntrinsicContentSize];
+            }
         }
     }
 }
@@ -164,7 +171,11 @@ using namespace AdaptiveCards;
 // update the intrinsic content size when the width become available
 - (void)updateIntrinsicContentSizeOfSelfAndViewGroup
 {
-    CGFloat width = self.frame.size.width;
+    CGFloat width = self.imageProperties.contentSize.width;
+    if (self.imageProperties.acrImageSize == ACRImageSizeStretch || (width > self.frame.size.width)) {
+        width = self.frame.size.width;
+    }
+
     CGFloat height = 1.0f;
 
     CGSize ratios = getAspectRatio(self.imageProperties.contentSize);
@@ -181,10 +192,30 @@ using namespace AdaptiveCards;
 
 - (void)update:(ACRImageProperties *)imageProperties
 {
+    isImageSet = YES;
     if (imageProperties) {
         self.imageProperties = imageProperties;
         [self invalidateIntrinsicContentSize];
     }
 }
 
+- (void)setHeightConstraint
+{
+    [self updateIntrinsicContentSizeOfSelfAndViewGroup];
+    heightConstraint = [self setHeightConstraintUtil:self.heightAnchor];
+}
+
+- (void)setImageViewHeightConstraint
+{
+    // set new height anchor to the height of new intrinsic contentsize
+    imageViewHeightConstraint = [self setHeightConstraintUtil:_imageView.heightAnchor];
+}
+
+- (NSLayoutConstraint *)setHeightConstraintUtil:(NSLayoutDimension *)heightAnchor
+{
+    NSLayoutConstraint *constraint = [heightAnchor constraintEqualToConstant:self.imageProperties.contentSize.height];
+    constraint.priority = 999;
+    constraint.active = YES;
+    return constraint;
+}
 @end
