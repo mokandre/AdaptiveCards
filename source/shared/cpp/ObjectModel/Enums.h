@@ -71,6 +71,7 @@ namespace AdaptiveSharedNamespace
         ForegroundColor,
         ForegroundColors,
         Good,
+        Headings,
         Height,
         Highlight,
         HighlightColor,
@@ -103,6 +104,7 @@ namespace AdaptiveSharedNamespace
         Language,
         Large,
         Left,
+        Level,
         Light,
         Lighter,
         LineColor,
@@ -136,6 +138,7 @@ namespace AdaptiveSharedNamespace
         Requires,
         RichTextBlock,
         Right,
+        Rtl,
         Schema,
         SelectAction,
         Separator,
@@ -187,7 +190,7 @@ namespace AdaptiveSharedNamespace
 
     enum class CardElementType
     {
-        // When the order of existing enums are changed, coresponding changes are needed in iOS (ACOBaseCardElement.h)
+        // When the order of existing enums are changed, corresponding changes are needed in iOS (ACOBaseCardElement.h)
         ActionSet = 0,
         AdaptiveCard,
         ChoiceInput,
@@ -217,6 +220,13 @@ namespace AdaptiveSharedNamespace
         TextRun = 0
     };
     DECLARE_ADAPTIVECARD_ENUM(InlineElementType);
+
+    enum class TextStyle
+    {
+        Paragraph = 0,
+        Heading
+    };
+    DECLARE_ADAPTIVECARD_ENUM(TextStyle);
 
     enum class TextSize
     {
